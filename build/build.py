@@ -38,6 +38,11 @@ TAX_FACTOR = 1.13806       # imposto Meta: toggle ON aplica ×1,13806 (+13,806%)
 # Casamento por prefixo (sem acento, minúsculas) — inclui a variante "- 35%".
 MAIN_PRODUCT_PREFIX = "protocolo reset hormonal"
 
+# Campanhas de terceiros que aparecem na conta e não devem ser contabilizadas
+# (nome de Campaign Name contendo qualquer um destes termos, sem distinção de
+# maiúsculas/acentos/colchetes). Removidas de TODAS as visualizações do dash.
+EXCLUDED_CAMPAIGN_TERMS = ["ibec", "piso", "motor"]
+
 # Rótulos exibidos na interface (lidos pelo template.html):
 CLIENT_NAME  = "Reset Hormonal"
 CLIENT_SUB   = "Controle de Tráfego · VSL"
@@ -128,6 +133,12 @@ def is_paid(status: str) -> bool:
 
 def is_main_product(prod: str) -> bool:
     return norm(prod).startswith(MAIN_PRODUCT_PREFIX)
+
+
+def is_excluded_campaign(camp: str) -> bool:
+    """Campanhas de terceiros (não do cliente) — ver EXCLUDED_CAMPAIGN_TERMS."""
+    cn = norm(camp)
+    return any(term in cn for term in EXCLUDED_CAMPAIGN_TERMS)
 
 
 # ----- Máscara de PII (a página publicada é pública) ----- #
@@ -289,6 +300,12 @@ def process(meta_rows, sales_rows):
             "nm": first_last_initial(cell(row, sidx["name"])),
             "em": mask_email(cell(row, sidx["email"])),
         })
+
+    # Filtro final: remove campanhas de terceiros (não são do cliente e infla o
+    # gasto/contagem de forma irreal). Aplicado por último, sem alterar a lógica
+    # de junção/atribuição acima — só "esconde" quem casa com EXCLUDED_CAMPAIGN_TERMS.
+    meta = [m for m in meta if not is_excluded_campaign(m["camp"])]
+    sales = [s for s in sales if not is_excluded_campaign(s["camp"])]
 
     dates = sorted({d for d in ([m["d"] for m in meta if m["d"]] + [s["d"] for s in sales if s["d"]])})
     now_brt = datetime.now(BRT)
