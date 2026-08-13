@@ -16,6 +16,7 @@
     --text-primary:#1A1D2E; --accent-blue:#3B5BDB; --accent-blue-light:#EEF2FF; --selected:#DBEAFE;
     --bg:#F4F5F8; --surface:#FFFFFF; --border:#E6E8EE; --muted:#6B7280; --ink:#1A1D2E;
     --good:#0CA30C; --bad:#E34948; --yellow:#E8A400; --aqua:#1BAF7A; --red:#E34948; --black:#1A1D2E;
+    --purple:#9B59B6; --orange:#E67E22; --pink:#E64980;
     --grid:#EEF0F5; --thead:#F5F7FB; --tfoot:#EEF1F7;
   }
   :root[data-theme="dark"]{
@@ -49,12 +50,34 @@
     display:flex; align-items:center; gap:12px; padding:8px 20px; flex-wrap:wrap}
   .topbar .ptitle{font-weight:700; font-size:16px; white-space:nowrap}
   .sep{width:1px; height:26px; background:var(--border)}
-  .date-field{display:flex; align-items:center; gap:5px; font-size:12px; color:var(--muted)}
-  .date-field input{border:1px solid var(--border); border-radius:8px; padding:6px 8px; font-size:12.5px; color:var(--ink); background:var(--surface)}
-  .presets{display:flex; gap:6px; flex-wrap:wrap}
   .chip{border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:999px; padding:5px 10px; font-size:12px; cursor:pointer; white-space:nowrap}
   .chip:hover{border-color:var(--accent-blue); color:var(--accent-blue)}
   .chip.active{background:var(--accent-blue); border-color:var(--accent-blue); color:#fff}
+
+  /* ---------- Date range selector ---------- */
+  .date-selector{position:relative}
+  .date-btn{font-size:12.5px}
+  .date-popover{position:absolute; top:calc(100% + 6px); left:0; z-index:50; background:var(--surface); border:1px solid var(--border); border-radius:12px; box-shadow:0 10px 30px rgba(0,0,0,.18); min-width:640px; overflow:hidden}
+  .dp-body{display:flex}
+  .dp-presets{display:flex; flex-direction:column; padding:10px 6px; border-right:1px solid var(--border); min-width:126px}
+  .dp-presets button{border:none; background:transparent; text-align:left; padding:8px 10px; border-radius:8px; font-size:12.5px; color:var(--ink); cursor:pointer}
+  .dp-presets button:hover{background:var(--accent-blue-light)}
+  .dp-presets button.active{background:var(--accent-blue); color:#fff}
+  .dp-cals{display:flex; gap:18px; padding:12px 16px}
+  .dp-cal-label{font-size:10.5px; letter-spacing:.06em; color:var(--muted); text-transform:uppercase; margin-bottom:6px; text-align:center}
+  .dp-cal-head{display:flex; align-items:center; justify-content:space-between; font-size:12.5px; font-weight:600; margin-bottom:6px}
+  .dp-cal-head button{border:none; background:transparent; cursor:pointer; color:var(--muted); font-size:13px; padding:2px 6px; border-radius:6px}
+  .dp-cal-head button:hover{background:var(--accent-blue-light); color:var(--accent-blue)}
+  .dp-cal-grid{display:grid; grid-template-columns:repeat(7,26px); gap:2px}
+  .dp-cal-grid .dow{font-size:10px; color:var(--muted); text-align:center; padding:2px 0}
+  .dp-cal-grid .day{font-size:11.5px; text-align:center; padding:5px 0; border-radius:6px; cursor:pointer; color:var(--ink)}
+  .dp-cal-grid .day.pad{color:var(--muted); opacity:.35}
+  .dp-cal-grid .day:hover{background:var(--accent-blue-light)}
+  .dp-cal-grid .day.in-range{background:var(--selected)}
+  .dp-cal-grid .day.sel{background:var(--accent-blue); color:#fff; font-weight:700}
+  .dp-footer{display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px 16px; border-top:1px solid var(--border); font-size:12px; color:var(--muted)}
+  .dp-actions{display:flex; gap:8px}
+  @media(max-width:700px){.date-popover{min-width:92vw} .dp-cals{flex-direction:column}}
   .spacer{flex:1 1 auto}
   .updated{font-size:11.5px; color:var(--muted); text-align:right; line-height:1.3}
   .btn{border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:9px; padding:8px 12px; font-size:12.5px; cursor:pointer; display:inline-flex; gap:7px; align-items:center; white-space:nowrap}
@@ -199,8 +222,25 @@
       <label class="ham" for="navToggle" title="Menu">☰</label>
       <div class="ptitle" id="ptitle">Visão Geral</div>
       <div class="sep"></div>
-      <div class="date-field">De <input type="date" id="dFrom"> Até <input type="date" id="dTo"></div>
-      <div class="presets" id="presets"></div>
+      <div class="date-selector" id="dateSelector">
+        <button class="btn date-btn" id="dateBtn">📅 <span id="dateBtnLabel"></span> <span style="opacity:.5">▾</span></button>
+        <div class="date-popover" id="datePopover" style="display:none">
+          <div class="dp-body">
+            <div class="dp-presets" id="dpPresets"></div>
+            <div class="dp-cals">
+              <div class="dp-cal-col"><div class="dp-cal-label">Data de início</div><div class="dp-cal" id="dpCalL"></div></div>
+              <div class="dp-cal-col"><div class="dp-cal-label">Data de término</div><div class="dp-cal" id="dpCalR"></div></div>
+            </div>
+          </div>
+          <div class="dp-footer">
+            <span id="dpSummary"></span>
+            <div class="dp-actions">
+              <button class="btn" id="dpCancel">Cancelar</button>
+              <button class="btn primary" id="dpApply">Aplicar</button>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="sep"></div>
       <div class="tax-toggle" id="taxToggle"><div class="toggle-track"><div class="toggle-thumb"></div></div><span class="toggle-label" id="taxLabel"></span></div>
       <button class="btn" id="themeBtn" title="Alternar tema claro/escuro">◐ Tema</button>
@@ -346,8 +386,9 @@ function addDays(s,n){const dt=new Date(s+'T00:00:00');dt.setDate(dt.getDate()+n
 const TODAY = B.today || B.date_max;
 
 /* ---------------- STATE ---------------- */
+const [TODAY_Y, TODAY_M] = TODAY.split('-');
 const STATE = {
-  page:'geral', from:B.date_min, to:B.date_max, preset:'todo', tax:false,
+  page:'geral', from:`${TODAY_Y}-${TODAY_M}-01`, to:TODAY, preset:'mes', tax:false,
   selDays:new Set(),
   mSelC:new Set(), mSelA:new Set(), mSelAd:new Set(),
   sort:{}, colw: JSON.parse(localStorage.getItem('dm_colw')||'{}'),
@@ -418,7 +459,7 @@ function renderTable(cfg){
       va=(va==null||!isFinite(va))?-Infinity:va; vb=(vb==null||!isFinite(vb))?-Infinity:vb;
       return dir==='asc'?va-vb:vb-va; }); }
   const ext={};
-  cfg.cols.forEach(c=>{ if(c.heat){ const vs=rows.map(r=>r.cells[c.key]).filter(v=>v!=null&&isFinite(v)); ext[c.key]=[Math.min(...vs),Math.max(...vs)]; }});
+  cfg.cols.forEach(c=>{ if(c.heat && HEAT_HUES[c.heat]){ const vs=rows.map(r=>r.cells[c.key]).filter(v=>v!=null&&isFinite(v)); ext[c.key]=[Math.min(...vs),Math.max(...vs)]; }});
   const fmt=(t,v)=> t==='brl'?brl(v):t==='pct'?pct(v):t==='int'?intf(v):t==='num'?numf(v):t==='roas'?roasf(v):t==='date'?brdate(v):dimf(v);
   const widths=cfg.cols.map(c=>colWidth(cfg,c)); const totalW=widths.reduce((a,b)=>a+b,0);
   const colgroup='<colgroup>'+cfg.cols.map((c,i)=>`<col style="width:${widths[i]}px">`).join('')+'</colgroup>';
@@ -430,7 +471,7 @@ function renderTable(cfg){
     const sel = cfg.selectable && cfg.selSet && cfg.selSet.has(r.k);
     const tds=cfg.cols.map(c=>{
       const v=r.cells[c.key]; let bg='';
-      if(c.heat && ext[c.key]) bg=`background:${heat(v,ext[c.key][0],ext[c.key][1],c.heat==='lo')}`;
+      if(c.heat && ext[c.key]) bg=`background:${heat(v,ext[c.key][0],ext[c.key][1],HEAT_HUES[c.heat])}`;
       const cls=(c.type==='dim'?'dim':'');
       return `<td class="${cls}" style="${bg}">${fmt(c.type,v)}</td>`;
     }).join('');
@@ -469,12 +510,12 @@ function renderTable(cfg){
     });
   }
 }
-function heat(v,lo,hi,lower){
+/* apenas Gasto (vermelho), Faturamento (verde) e ROAS (âmbar) recebem heatmap — cor fixa por coluna, intensidade por valor */
+const HEAT_HUES={gasto:[227,73,72], fat:[27,175,122], roas:[232,164,0]};
+function heat(v,lo,hi,rgb){
   if(v==null||!isFinite(v)||hi===lo) return 'transparent';
-  let t=(v-lo)/(hi-lo), good=lower?1-t:t;
-  const bad=[227,73,72], gd=[12,163,12];
-  const r=Math.round(bad[0]+(gd[0]-bad[0])*good), g=Math.round(bad[1]+(gd[1]-bad[1])*good), b=Math.round(bad[2]+(gd[2]-bad[2])*good);
-  return `rgba(${r},${g},${b},${(0.10+0.34*Math.abs(good-0.5)*2).toFixed(2)})`;
+  const t=(v-lo)/(hi-lo);
+  return `rgba(${rgb[0]},${rgb[1]},${rgb[2]},${(0.10+0.32*t).toFixed(2)})`;
 }
 function toggleSet(set,key,ctrl){
   if(ctrl){ set.has(key)?set.delete(key):set.add(key); }
@@ -565,17 +606,17 @@ function kpiCard(k){ return `<div class="kpi ${k.hero?'hero':''}"><div class="kl
 
 /* ---------------- colunas das tabelas ---------------- */
 const METRIC_COLS=[
-  {key:'gasto',label:'Gasto',type:'brl',heat:'hi'},
-  {key:'cpm',label:'CPM',type:'brl',heat:'lo'},
-  {key:'ctr',label:'CTR',type:'pct',heat:'hi'},
-  {key:'cr',label:'CR',type:'pct',heat:'hi'},
-  {key:'vischk',label:'VisCHK',type:'pct',heat:'hi'},
-  {key:'convchk',label:'ConvCHK',type:'pct',heat:'hi'},
-  {key:'vendas',label:'Vendas',type:'int',heat:'hi'},
-  {key:'cac',label:'CAC',type:'brl',heat:'lo'},
-  {key:'fat',label:'Faturamento',type:'brl',heat:'hi'},
-  {key:'ticket',label:'Ticket',type:'brl',heat:'hi'},
-  {key:'roas',label:'ROAS',type:'roas',heat:'hi'},
+  {key:'gasto',label:'Gasto',type:'brl',heat:'gasto'},
+  {key:'cpm',label:'CPM',type:'brl'},
+  {key:'ctr',label:'CTR',type:'pct'},
+  {key:'cr',label:'CR',type:'pct'},
+  {key:'vischk',label:'VisCHK',type:'pct'},
+  {key:'convchk',label:'ConvCHK',type:'pct'},
+  {key:'vendas',label:'Vendas',type:'int'},
+  {key:'cac',label:'CAC',type:'brl'},
+  {key:'fat',label:'Faturamento',type:'brl',heat:'fat'},
+  {key:'ticket',label:'Ticket',type:'brl'},
+  {key:'roas',label:'ROAS',type:'roas',heat:'roas'},
 ];
 const DAILY_COLS=[{key:'date',label:'Data',type:'date'},{key:'wd',label:'Dia',type:'dim',w:64}].concat(METRIC_COLS);
 const HCOLS=[{key:'dim',label:'',type:'dim',big:true}].concat(METRIC_COLS.map(c=>{const o={...c}; delete o.heat; return o;}));
@@ -600,18 +641,22 @@ function renderProdTable(id, salesSet){
 
 /* ---------------- funil + gráficos de conversão (comuns às 2 abas) ---------------- */
 function renderFunnel(id, steps){
-  document.getElementById(id).innerHTML=steps.map(s=>`
-    <div class="step"><div><div class="m-label">${s[0]}</div><div class="m-val">${s[1]}</div></div>
-    <div class="secs">${s[2].map(x=>`<div><span class="s-label">${x[0]}</span><span class="s-val">${x[1]}</span></div>`).join('')}</div></div>`).join('');
+  document.getElementById(id).innerHTML=steps.map(s=>{
+    const color=s[3]||'var(--accent-blue)';
+    const valColor=s[4]?` style="color:${color}"`:'';
+    return `
+    <div class="step" style="border-left-color:${color}"><div><div class="m-label">${s[0]}</div><div class="m-val"${valColor}>${s[1]}</div></div>
+    <div class="secs">${s[2].map(x=>`<div><span class="s-label">${x[0]}</span><span class="s-val">${x[1]}</span></div>`).join('')}</div></div>`;
+  }).join('');
 }
 function funnelSteps(t){ const d=derive(t), g=d.gasto; return [
-  ['Gasto Total', brl(g), []],
-  ['Impressões', intf(t.im), [['CPM',brl(d.cpm)]]],
-  ['Cliques', intf(t.cl), [['CPC',brl(d.cpc)],['CTR',pct(d.ctr)]]],
-  ['Page Views', intf(t.pv), [['CPV',brl(d.cpv)],['CR',pct(d.cr)]]],
-  ['Checkouts', intf(t.ck), [['CPIC',brl(d.cpic)],['VisCHK',pct(d.vischk)]]],
-  ['Vendas', intf(t.vendas), [['CAC',brl(d.cac)],['ConvCHK',pct(d.convchk)]]],
-  ['Faturamento', brl(t.fat), [['ROAS',roasf(d.roas)],['Ticket Médio',brl(d.ticket)]]],
+  ['Gasto Total', brl(g), [], 'var(--bad)', true],
+  ['Impressões', intf(t.im), [['CPM',brl(d.cpm)]], 'var(--purple)'],
+  ['Cliques', intf(t.cl), [['CPC',brl(d.cpc)],['CTR',pct(d.ctr)]], 'var(--accent-blue)'],
+  ['Page Views', intf(t.pv), [['CPV',brl(d.cpv)],['CR',pct(d.cr)]], 'var(--orange)'],
+  ['Checkouts', intf(t.ck), [['CPIC',brl(d.cpic)],['VisCHK',pct(d.vischk)]], 'var(--pink)'],
+  ['Vendas', intf(t.vendas), [['CAC',brl(d.cac)],['ConvCHK',pct(d.convchk)]], 'var(--accent-blue)'],
+  ['Faturamento', brl(t.fat), [['ROAS',roasf(d.roas)],['Ticket Médio',brl(d.ticket)]], 'var(--aqua)', true],
 ]; }
 function convCharts(id1,id2,id3,dd){
   multiLine(id1, dd, [{label:'CPM',fn:x=>x.im?+((x.sp*taxf())/x.im*1000).toFixed(2):null,color:'#E34948',fmt:'brl',axis:'L'},
@@ -637,7 +682,7 @@ function renderGeral(){
     rows:dl.map(x=>{const dv=derive(x); return {k:x.d, cells:dailyCells(x,dv)};}),
     total:dailyCells(t,d,true),
     selectable:true, selSet:STATE.selDays,
-    onSelect:(k,e)=>{ toggleSet(STATE.selDays,k,e&&(e.ctrlKey||e.metaKey)); syncDateInputs(); renderAll(); },
+    onSelect:(k,e)=>{ toggleSet(STATE.selDays,k,e&&(e.ctrlKey||e.metaKey)); renderAll(); },
   });
 }
 
@@ -671,7 +716,7 @@ function renderMeta(){
     rows:dl.map(x=>{const dv=derive(x); return {k:x.d, cells:dailyCells(x,dv)};}),
     total:dailyCells(t,d,true),
     selectable:true, selSet:STATE.selDays,
-    onSelect:(k,e)=>{ toggleSet(STATE.selDays,k,e&&(e.ctrlKey||e.metaKey)); syncDateInputs(); renderAll(); },
+    onSelect:(k,e)=>{ toggleSet(STATE.selDays,k,e&&(e.ctrlKey||e.metaKey)); renderAll(); },
   });
 
   function hierRows(map){ return Object.entries(map).map(([k,a])=>{const dv=derive(a);
@@ -841,7 +886,7 @@ function iaRestore(){
 }
 function renderIA(){ iaStatusText(); iaRenderWin(); iaRestore(); }
 
-/* ---------------- date presets ---------------- */
+/* ---------------- date range picker (popover: presets + 2 calendários) ---------------- */
 const PRESETS=[
   ['hoje','Hoje',()=>[TODAY,TODAY]],
   ['ontem','Ontem',()=>[addDays(TODAY,-1),addDays(TODAY,-1)]],
@@ -851,15 +896,79 @@ const PRESETS=[
   ['30d','30 dias',()=>[addDays(TODAY,-29),TODAY]],
   ['mes','Este mês',()=>{const [y,m]=TODAY.split('-');return [`${y}-${m}-01`,TODAY];}],
   ['mespass','Mês passado',()=>{const dt=new Date(TODAY+'T00:00:00');const f=new Date(dt.getFullYear(),dt.getMonth()-1,1);const l=new Date(dt.getFullYear(),dt.getMonth(),0);return [dstr(f),dstr(l)];}],
-  ['todo','Todo período',()=>[B.date_min,B.date_max]],
+  ['todo','Máximo',()=>[B.date_min,B.date_max]],
 ];
-function renderPresets(){
-  document.getElementById('presets').innerHTML=PRESETS.map(p=>`<button class="chip ${STATE.preset===p[0]?'active':''}" data-p="${p[0]}">${p[1]}</button>`).join('');
-  document.querySelectorAll('#presets .chip').forEach(c=>c.addEventListener('click',()=>{ applyPreset(c.dataset.p); }));
-}
 function applyPreset(id){ const p=PRESETS.find(x=>x[0]===id); if(!p)return; const [f,t]=p[2]();
-  STATE.from=f; STATE.to=t; STATE.preset=id; STATE.selDays.clear(); syncDateInputs(); renderPresets(); renderAll(); }
-function syncDateInputs(){ document.getElementById('dFrom').value=STATE.from||''; document.getElementById('dTo').value=STATE.to||''; }
+  STATE.from=f; STATE.to=t; STATE.preset=id; STATE.selDays.clear(); updateDateBtnLabel(); renderAll(); }
+
+const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+const DOW=['D','S','T','Q','Q','S','S'];
+const DP={tmpFrom:null,tmpTo:null,tmpPreset:null,calL:{y:2026,m:0},calR:{y:2026,m:0}};
+function dateToYM(d){ const [y,m]=d.split('-'); return {y:+y, m:+m-1}; }
+function monthMatrix(y,m){
+  const first=new Date(y,m,1), startDow=first.getDay();
+  const daysInMonth=new Date(y,m+1,0).getDate();
+  const rows=Math.ceil((startDow+daysInMonth)/7);
+  const start=new Date(y,m,1-startDow);
+  const cells=[];
+  for(let i=0;i<rows*7;i++){ const dt=new Date(start); dt.setDate(start.getDate()+i);
+    cells.push({date:dstr(dt), day:dt.getDate(), pad:dt.getMonth()!==m}); }
+  return cells;
+}
+function renderCal(containerId,y,m,side){
+  const cells=monthMatrix(y,m);
+  const dowRow=DOW.map(d=>`<div class="dow">${d}</div>`).join('');
+  const dayCells=cells.map(c=>{
+    let cls='day'+(c.pad?' pad':'');
+    if((DP.tmpFrom&&c.date===DP.tmpFrom)||(DP.tmpTo&&c.date===DP.tmpTo)) cls+=' sel';
+    else if(DP.tmpFrom&&DP.tmpTo&&c.date>DP.tmpFrom&&c.date<DP.tmpTo) cls+=' in-range';
+    return `<div class="${cls}" data-date="${c.date}">${c.day}</div>`;
+  }).join('');
+  const el=document.getElementById(containerId);
+  el.innerHTML=`<div class="dp-cal-head"><button type="button" data-nav="prev">‹</button><span>${MONTHS[m]} ${y}</span><button type="button" data-nav="next">›</button></div><div class="dp-cal-grid">${dowRow}${dayCells}</div>`;
+  el.querySelectorAll('.day').forEach(d=>d.addEventListener('click',()=>pickDate(d.dataset.date)));
+  el.querySelectorAll('[data-nav]').forEach(btn=>btn.addEventListener('click',()=>navMonth(side,btn.dataset.nav)));
+}
+function renderCals(){ renderCal('dpCalL',DP.calL.y,DP.calL.m,'L'); renderCal('dpCalR',DP.calR.y,DP.calR.m,'R'); }
+function navMonth(side,dir){
+  const cal=side==='L'?DP.calL:DP.calR; let {y,m}=cal; m+=dir==='next'?1:-1;
+  if(m<0){m=11;y--;} if(m>11){m=0;y++;}
+  if(side==='L') DP.calL={y,m}; else DP.calR={y,m};
+  renderCals();
+}
+function pickDate(d){
+  if(!DP.tmpFrom||(DP.tmpFrom&&DP.tmpTo)){ DP.tmpFrom=d; DP.tmpTo=null; }
+  else if(d<DP.tmpFrom){ DP.tmpTo=DP.tmpFrom; DP.tmpFrom=d; }
+  else DP.tmpTo=d;
+  DP.tmpPreset='';
+  renderPresetsList(); renderCals(); renderSummary();
+}
+function renderPresetsList(){
+  document.getElementById('dpPresets').innerHTML=PRESETS.map(p=>`<button type="button" class="${DP.tmpPreset===p[0]?'active':''}" data-p="${p[0]}">${p[1]}</button>`).join('');
+  document.querySelectorAll('#dpPresets button').forEach(b=>b.addEventListener('click',()=>{
+    const p=PRESETS.find(x=>x[0]===b.dataset.p); const [f,t]=p[2]();
+    DP.tmpFrom=f; DP.tmpTo=t; DP.tmpPreset=p[0];
+    DP.calL=dateToYM(f); DP.calR=dateToYM(t);
+    renderPresetsList(); renderCals(); renderSummary();
+  }));
+}
+function renderSummary(){
+  const el=document.getElementById('dpSummary');
+  if(!(DP.tmpFrom&&DP.tmpTo)){ el.textContent='Selecione as datas'; return; }
+  const days=Math.round((new Date(DP.tmpTo+'T00:00:00')-new Date(DP.tmpFrom+'T00:00:00'))/86400000)+1;
+  el.textContent=`${brdate(DP.tmpFrom)} – ${brdate(DP.tmpTo)} · ${days} dia${days===1?'':'s'}`;
+}
+function openDatePicker(){
+  DP.tmpFrom=STATE.from; DP.tmpTo=STATE.to; DP.tmpPreset=STATE.preset;
+  DP.calL=dateToYM(STATE.from||TODAY); DP.calR=dateToYM(STATE.to||TODAY);
+  renderPresetsList(); renderCals(); renderSummary();
+  document.getElementById('datePopover').style.display='block';
+}
+function closeDatePicker(){ document.getElementById('datePopover').style.display='none'; }
+function updateDateBtnLabel(){
+  const p=PRESETS.find(x=>x[0]===STATE.preset);
+  document.getElementById('dateBtnLabel').textContent=`${brdate(STATE.from)} – ${brdate(STATE.to)} · ${p?p[1]:'Personalizado'}`;
+}
 
 /* ---------------- navigation & boot ---------------- */
 function setPage(p){ STATE.page=p;
@@ -880,10 +989,20 @@ document.getElementById('themeBtn').addEventListener('click',()=>{ const dark=do
 
 document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>setPage(n.dataset.page)));
 document.getElementById('taxToggle').addEventListener('click',function(){ STATE.tax=!STATE.tax; this.classList.toggle('on',STATE.tax); renderAll(); });
-document.getElementById('dFrom').addEventListener('change',e=>{ STATE.from=e.target.value; STATE.preset=''; STATE.selDays.clear(); renderPresets(); renderAll(); });
-document.getElementById('dTo').addEventListener('change',e=>{ STATE.to=e.target.value; STATE.preset=''; STATE.selDays.clear(); renderPresets(); renderAll(); });
 document.getElementById('clearBtn').addEventListener('click',()=>{ STATE.mSelC.clear();STATE.mSelA.clear();STATE.mSelAd.clear();STATE.selDays.clear(); applyPreset('mes'); });
 document.getElementById('refreshBtn').addEventListener('click',function(){ this.classList.add('loading'); location.href=location.pathname+'?t='+Date.now()+location.hash; });
+
+document.getElementById('dateBtn').addEventListener('click',e=>{ e.stopPropagation();
+  const open=document.getElementById('datePopover').style.display==='block';
+  if(open) closeDatePicker(); else openDatePicker();
+});
+document.getElementById('datePopover').addEventListener('click',e=>e.stopPropagation());
+document.addEventListener('click',()=>closeDatePicker());
+document.getElementById('dpCancel').addEventListener('click',closeDatePicker);
+document.getElementById('dpApply').addEventListener('click',()=>{
+  if(DP.tmpFrom && DP.tmpTo){ STATE.from=DP.tmpFrom; STATE.to=DP.tmpTo; STATE.preset=DP.tmpPreset||''; STATE.selDays.clear(); updateDateBtnLabel(); renderAll(); }
+  closeDatePicker();
+});
 
 /* IA Insights config + geração */
 document.getElementById('iaCfgBtn').addEventListener('click',()=>{ const c=document.getElementById('iaConfig');
@@ -908,7 +1027,7 @@ document.getElementById('updated').innerHTML='Última atualização:<br>'+B.gene
 document.getElementById('buildFoot').textContent='build __BUILD_ID__';
 document.getElementById('buildFoot2').textContent='· build __BUILD_ID__';
 
-syncDateInputs(); renderPresets(); iaStatusText();
+updateDateBtnLabel(); iaStatusText();
 setPage(location.hash==='#meta'?'meta':(location.hash==='#ia'?'ia':'geral'));
 
 /* auto-refresh com cache-bust ~30 min */
