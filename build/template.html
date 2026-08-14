@@ -617,9 +617,9 @@ function convCharts(id1,id2,id3,dd){
   multiLine(id1, dd, [{label:'CPM',fn:x=>x.im?+((x.sp*taxf())/x.im*1000).toFixed(2):null,color:'#E34948',fmt:'brl',axis:'L'},
      {label:'CTR',fn:x=>x.im?+(x.cl/x.im).toFixed(4):null,color:'#3B5BDB',fmt:'pct',axis:'R'}], {L:{fmt:'brl'},R:{fmt:'pct'}});
   multiLine(id2, dd, [{label:'CR',fn:x=>x.cl?+(x.pv/x.cl).toFixed(4):null,color:'#3B5BDB',fmt:'pct',axis:'L'},
-     {label:'VisCHK',fn:x=>x.pv?+(x.ck/x.pv).toFixed(4):null,color:'#1BAF7A',fmt:'pct',axis:'L'}], {L:{fmt:'pct'}});
-  multiLine(id3, dd, [{label:'ConvLP',fn:x=>x.pv?+(x.vendasM/x.pv).toFixed(4):null,color:'#E8A400',fmt:'pct',axis:'L'},
-     {label:'ConvCHK',fn:x=>x.ck?+(x.vendasM/x.ck).toFixed(4):null,color:'#1BAF7A',fmt:'pct',axis:'L'}], {L:{fmt:'pct'}});
+     {label:'VisCHK',fn:x=>x.pv?+(x.ck/x.pv).toFixed(4):null,color:'#1BAF7A',fmt:'pct',axis:'R'}], {L:{fmt:'pct'},R:{fmt:'pct'}});
+  multiLine(id3, dd, [{label:'ConvLP',fn:x=>x.pv?+(x.vendasM/x.pv).toFixed(4):null,color:'#E8A400',fmt:'pct',axis:'R'},
+     {label:'ConvCHK',fn:x=>x.ck?+(x.vendasM/x.ck).toFixed(4):null,color:'#1BAF7A',fmt:'pct',axis:'L'}], {L:{fmt:'pct'},R:{fmt:'pct'}});
 }
 
 /* ---------------- PAGE 1: Visão Geral ---------------- */
