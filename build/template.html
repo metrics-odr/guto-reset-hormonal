@@ -149,7 +149,8 @@
 
   /* Tables */
   .table-chart-pair{background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-top:16px}
-  .table-chart-pair .thead-title{padding:12px 15px 0; font-weight:600; font-size:14px}
+  .table-chart-pair .thead-title{padding:12px 15px 0; font-weight:600; font-size:14px; display:flex; align-items:center; justify-content:space-between; gap:10px}
+  .table-chart-pair .thead-title .tbl-clear{font-weight:400; font-size:11.5px; padding:5px 10px}
   .tbl-wrap{overflow:auto; position:relative}
   .tbl-normal{max-height:250px}
   .tbl-double{max-height:420px}
@@ -303,19 +304,19 @@
 
         <h2 class="sec-title">Otimização · Campanha → Conjunto → Anúncio</h2>
         <div class="table-chart-pair">
-          <div class="thead-title">Campanhas</div>
+          <div class="thead-title">Campanhas<button class="btn tbl-clear" data-clear="C">Remover filtros</button></div>
           <div class="tbl-wrap tbl-normal"><table class="dt" id="tCamp"></table></div>
           <div class="pair-chart"><div class="pc-title">CAC por campanha, por dia</div><canvas id="chCamp"></canvas></div>
         </div>
         <div class="table-chart-pair">
-          <div class="thead-title">Conjuntos (Ad Sets)</div>
+          <div class="thead-title">Conjuntos (Ad Sets)<button class="btn tbl-clear" data-clear="A">Remover filtros</button></div>
           <div class="tbl-wrap tbl-normal"><table class="dt" id="tAdset"></table></div>
-          <div class="pair-chart"><div class="pc-title">CAC por campanha, por dia</div><canvas id="chAdset"></canvas></div>
+          <div class="pair-chart"><div class="pc-title">CAC por conjunto, por dia</div><canvas id="chAdset"></canvas></div>
         </div>
         <div class="table-chart-pair">
-          <div class="thead-title">Anúncios</div>
+          <div class="thead-title">Anúncios<button class="btn tbl-clear" data-clear="D">Remover filtros</button></div>
           <div class="tbl-wrap tbl-double"><table class="dt" id="tAd"></table></div>
-          <div class="pair-chart"><div class="pc-title">CAC por campanha, por dia</div><canvas id="chAd"></canvas></div>
+          <div class="pair-chart"><div class="pc-title">CAC por anúncio, por dia</div><canvas id="chAd"></canvas></div>
         </div>
 
         <h2 class="sec-title">Compradores <span class="pill q" id="qCount"></span></h2>
@@ -581,17 +582,17 @@ function hbar(id, items, valFn, color, top, fmtFn){
       scales:{x:{beginAtZero:true,ticks:{color:mut,font:{size:9}},grid:{color:cgrid()}},
               y:{ticks:{color:mut,font:{size:9}},grid:{display:false}}}}});
 }
-/* CAC por campanha, por dia (uma linha por campanha) */
-function campCacChart(id, fM, fS){
+/* CAC por dia — uma linha por item da dimensão da tabela (camp/adset/ad); escopo já reflete os filtros ativos */
+function dimCacChart(id, dim, fM, fS){
   destroy(id); const el=document.getElementById(id); if(!el) return;
-  const spendTot={}; fM.forEach(r=>spendTot[r.camp]=(spendTot[r.camp]||0)+r.sp);
-  const camps=Object.keys(spendTot).sort((a,b)=>spendTot[b]-spendTot[a]).slice(0,6);
+  const spendTot={}; fM.forEach(r=>spendTot[r[dim]]=(spendTot[r[dim]]||0)+r.sp);
+  const keys=Object.keys(spendTot).sort((a,b)=>spendTot[b]-spendTot[a]).slice(0,6);
   const dset=new Set(); fM.forEach(r=>r.d&&dset.add(r.d)); fS.forEach(r=>r.d&&dset.add(r.d));
   const days=[...dset].sort();
   const K=(c,dd)=>c+''+dd, sp={}, vd={};
-  fM.forEach(r=>{if(!r.d)return; sp[K(r.camp,r.d)]=(sp[K(r.camp,r.d)]||0)+r.sp;});
-  fS.forEach(r=>{if(!r.d)return; vd[K(r.camp,r.d)]=(vd[K(r.camp,r.d)]||0)+r.main;});
-  const ds=camps.map((c,i)=>({label:c.length>22?c.slice(0,22)+'…':c,
+  fM.forEach(r=>{if(!r.d)return; sp[K(r[dim],r.d)]=(sp[K(r[dim],r.d)]||0)+r.sp;});
+  fS.forEach(r=>{if(!r.d)return; vd[K(r[dim],r.d)]=(vd[K(r[dim],r.d)]||0)+r.main;});
+  const ds=keys.map((c,i)=>({label:c.length>22?c.slice(0,22)+'…':c,
     data:days.map(dd=>{const s=(sp[K(c,dd)]||0)*taxf(), v=vd[K(c,dd)]||0; return v?+(s/v).toFixed(2):null;}),
     borderColor:PALETTE[i%PALETTE.length],backgroundColor:PALETTE[i%PALETTE.length],borderWidth:2,pointRadius:1.5,spanGaps:true,tension:.25}));
   const mut=cmuted();
@@ -692,11 +693,16 @@ function metaScope(ex){ let fM=metaActive(), fS=salesActive().filter(s=>s.meta);
   if(ex!=='A'&&STATE.mSelA.size){ fM=fM.filter(r=>STATE.mSelA.has(r.adset)); fS=fS.filter(r=>STATE.mSelA.has(r.adset)); }
   if(ex!=='D'&&STATE.mSelAd.size){ fM=fM.filter(r=>STATE.mSelAd.has(r.ad)); fS=fS.filter(r=>STATE.mSelAd.has(r.ad)); }
   return {fM,fS}; }
+/* hierarquia Campanha > Conjunto > Anúncio: filtrar num nível nunca desfaz o filtro de um nível acima
+   (ancestral) — só reseta os níveis abaixo (descendentes), que deixam de fazer sentido no novo escopo. */
+const DIM_ORDER=['C','A','D'];
 function selDim(dim,key,ctrl){
   const sets={C:STATE.mSelC,A:STATE.mSelA,D:STATE.mSelAd}, s=sets[dim];
   if(ctrl){ s.has(key)?s.delete(key):s.add(key); }
-  else { const sole=s.has(key)&&s.size===1&&!Object.entries(sets).some(([k2,x])=>k2!==dim&&x.size);
-    Object.values(sets).forEach(x=>x.clear()); if(!sole) s.add(key); }
+  else { const sole=s.has(key)&&s.size===1;
+    s.clear(); if(!sole) s.add(key);
+    DIM_ORDER.slice(DIM_ORDER.indexOf(dim)+1).forEach(k2=>sets[k2].clear());
+  }
   renderMeta();
 }
 function renderMeta(){
@@ -730,7 +736,7 @@ function renderMeta(){
   renderTable({id:'tAd', cols:HCOLS.map((c,i)=>i===0?{...c,label:'Anúncio'}:c), rows:hierRows(buildAgg(Sd.fS,Sd.fM,'ad')), total:totRowOf(totals(Sd.fS,Sd.fM)),
     selectable:true, selSet:STATE.mSelAd, onSelect:(k,e)=>selDim('D',k,e&&(e.ctrlKey||e.metaKey))});
 
-  campCacChart('chCamp', fM, fS); campCacChart('chAdset', fM, fS); campCacChart('chAd', fM, fS);
+  dimCacChart('chCamp', 'camp', fM, fS); dimCacChart('chAdset', 'adset', fM, fS); dimCacChart('chAd', 'ad', fM, fS);
 
   const vendas=fS.reduce((s,r)=>s+r.main,0);
   document.getElementById('qCount').textContent=vendas+' vendas · '+fS.length+' linhas';
@@ -990,6 +996,12 @@ document.getElementById('themeBtn').addEventListener('click',()=>{ const dark=do
 document.querySelectorAll('.nav-item').forEach(n=>n.addEventListener('click',()=>setPage(n.dataset.page)));
 document.getElementById('taxToggle').addEventListener('click',function(){ STATE.tax=!STATE.tax; this.classList.toggle('on',STATE.tax); renderAll(); });
 document.getElementById('clearBtn').addEventListener('click',()=>{ STATE.mSelC.clear();STATE.mSelA.clear();STATE.mSelAd.clear();STATE.selDays.clear(); applyPreset('mes'); });
+document.querySelectorAll('.tbl-clear').forEach(btn=>btn.addEventListener('click',e=>{
+  e.stopPropagation();
+  const sets={C:STATE.mSelC,A:STATE.mSelA,D:STATE.mSelAd}, dim=btn.dataset.clear;
+  DIM_ORDER.slice(DIM_ORDER.indexOf(dim)).forEach(k=>sets[k].clear());
+  renderMeta();
+}));
 document.getElementById('refreshBtn').addEventListener('click',function(){ this.classList.add('loading'); location.href=location.pathname+'?t='+Date.now()+location.hash; });
 
 document.getElementById('dateBtn').addEventListener('click',e=>{ e.stopPropagation();
