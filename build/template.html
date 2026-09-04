@@ -172,6 +172,16 @@
   .pair-chart{border-top:1px solid var(--border); padding:8px 10px 4px; height:170px; position:relative}
   .pair-chart .pc-title{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; padding:0 4px 2px}
 
+  /* tooltip estilo Looker Studio: cartão com data + 1 linha por série, nome SEM truncar */
+  .dim-tooltip{position:absolute; z-index:25; pointer-events:none; opacity:0; transition:opacity .08s linear;
+    background:var(--surface); border:1px solid var(--border); border-radius:10px; box-shadow:0 8px 22px rgba(0,0,0,.22);
+    padding:8px 10px; font-size:11.5px; min-width:170px; max-width:340px}
+  .dim-tooltip-title{font-weight:700; color:var(--ink); margin-bottom:5px; white-space:nowrap}
+  .dim-tooltip-row{display:flex; align-items:flex-start; gap:7px; padding:2px 0}
+  .dim-tooltip-dot{width:11px; height:3px; border-radius:2px; margin-top:6px; flex:0 0 auto}
+  .dim-tooltip-name{flex:1 1 auto; color:var(--ink); line-height:1.35; word-break:break-word}
+  .dim-tooltip-val{font-weight:700; color:var(--ink); white-space:nowrap; margin-left:6px}
+
   .note{font-size:11.5px; color:var(--muted); margin-top:10px}
   .foot{margin-top:26px; font-size:11.5px; color:var(--muted); border-top:1px solid var(--border); padding-top:12px}
 
@@ -592,14 +602,34 @@ function dimCacChart(id, dim, fM, fS){
   const K=(c,dd)=>c+''+dd, sp={}, vd={};
   fM.forEach(r=>{if(!r.d)return; sp[K(r[dim],r.d)]=(sp[K(r[dim],r.d)]||0)+r.sp;});
   fS.forEach(r=>{if(!r.d)return; vd[K(r[dim],r.d)]=(vd[K(r[dim],r.d)]||0)+r.main;});
-  const ds=keys.map((c,i)=>({label:c.length>22?c.slice(0,22)+'…':c,
+  const ds=keys.map((c,i)=>({label:c,   /* nome completo — sem truncar (tooltip no estilo Looker Studio) */
     data:days.map(dd=>{const s=(sp[K(c,dd)]||0)*taxf(), v=vd[K(c,dd)]||0; return v?+(s/v).toFixed(2):null;}),
     borderColor:PALETTE[i%PALETTE.length],backgroundColor:PALETTE[i%PALETTE.length],borderWidth:2,pointRadius:1.5,spanGaps:true,tension:.25}));
   const mut=cmuted();
   charts[id]=new Chart(el,{type:'line',data:{labels:days.map(x=>x.slice(5)),datasets:ds},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{labels:{color:cink(),boxWidth:8,font:{size:9}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},
+      plugins:{legend:{display:false},tooltip:{enabled:false,external:c=>dimTooltip(c,id,days)}},
       scales:{x:{ticks:{color:mut,font:{size:9}},grid:{display:false}},y:{ticks:{color:mut,font:{size:9},callback:v=>brl(v)},grid:{color:cgrid()},beginAtZero:true}}}});
+}
+/* tooltip HTML no estilo Looker Studio: cartão com a data completa + uma linha por série,
+   com o NOME COMPLETO (sem cortar/truncar/"...") e o valor (CAC) naquele dia. */
+function dimTooltip(context, chartId, days){
+  const {chart, tooltip}=context;
+  const wrap=chart.canvas.parentNode;
+  let box=wrap.querySelector('.dim-tooltip');
+  if(!box){ box=document.createElement('div'); box.className='dim-tooltip'; wrap.appendChild(box); }
+  if(!tooltip || tooltip.opacity===0){ box.style.opacity=0; return; }
+  const idx=tooltip.dataPoints && tooltip.dataPoints[0] ? tooltip.dataPoints[0].dataIndex : null;
+  const dateFull = idx==null ? '' : brdate(days[idx]);
+  const rows=(tooltip.dataPoints||[]).map(dp=>{
+    const ds=chart.data.datasets[dp.datasetIndex];
+    return `<div class="dim-tooltip-row"><span class="dim-tooltip-dot" style="background:${ds.borderColor}"></span><span class="dim-tooltip-name">${esc(ds.label)}</span><span class="dim-tooltip-val">${brl(dp.raw)}</span></div>`;
+  }).join('');
+  box.innerHTML=`<div class="dim-tooltip-title">${esc(dateFull)}</div>${rows}`;
+  box.style.opacity=1;
+  const cw=wrap.clientWidth, tw=box.offsetWidth;
+  let x=tooltip.caretX-tw/2; x=Math.max(4,Math.min(x,cw-tw-4));
+  box.style.left=x+'px'; box.style.top='4px';
 }
 
 /* ---------------- KPI cards ---------------- */
