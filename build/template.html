@@ -172,6 +172,15 @@
   .pair-chart{border-top:1px solid var(--border); padding:8px 10px 4px; height:170px; position:relative}
   .pair-chart .pc-title{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; padding:0 4px 2px}
 
+  .thead-title .tbl-title{display:flex; align-items:center; gap:10px; min-width:0}
+  .tbl-search{border:1px solid var(--border); background:var(--surface); color:var(--ink); border-radius:8px; padding:5px 10px; font-size:12px; width:220px; max-width:100%}
+  .tbl-search:focus{outline:none; border-color:var(--accent-blue)}
+  .pair-chart .pc-head{display:flex; align-items:center; justify-content:space-between}
+  .pair-chart .pc-tabs{display:flex; gap:4px}
+  .pair-chart .pc-tabs button{border:1px solid var(--border); background:var(--surface); color:var(--muted); border-radius:6px; padding:2px 9px; font-size:11px; font-weight:600; cursor:pointer}
+  .pair-chart .pc-tabs button.active{background:var(--accent-blue); border-color:var(--accent-blue); color:#fff}
+  .pair-chart canvas{max-height:calc(100% - 22px)}
+
   .note{font-size:11.5px; color:var(--muted); margin-top:10px}
   .foot{margin-top:26px; font-size:11.5px; color:var(--muted); border-top:1px solid var(--border); padding-top:12px}
 
@@ -304,19 +313,19 @@
 
         <h2 class="sec-title">Otimização · Campanha → Conjunto → Anúncio</h2>
         <div class="table-chart-pair">
-          <div class="thead-title">Campanhas<button class="btn tbl-clear" data-clear="C">Remover filtros</button></div>
+          <div class="thead-title"><div class="tbl-title">Campanhas<input class="tbl-search" data-q="C" type="search" placeholder="Buscar campanha..."></div><button class="btn tbl-clear" data-clear="C">Remover filtros</button></div>
           <div class="tbl-wrap tbl-normal"><table class="dt" id="tCamp"></table></div>
-          <div class="pair-chart"><div class="pc-title">CAC por campanha, por dia</div><canvas id="chCamp"></canvas></div>
+          <div class="pair-chart"><div class="pc-head"><div class="pc-title" data-title="campanha">CAC por campanha, por dia</div><div class="pc-tabs" data-chart="chCamp"><button data-m="cac" class="active">CAC</button><button data-m="roas">ROAS</button><button data-m="tm">TM</button></div></div><canvas id="chCamp"></canvas></div>
         </div>
         <div class="table-chart-pair">
-          <div class="thead-title">Conjuntos (Ad Sets)<button class="btn tbl-clear" data-clear="A">Remover filtros</button></div>
+          <div class="thead-title"><div class="tbl-title">Conjuntos (Ad Sets)<input class="tbl-search" data-q="A" type="search" placeholder="Buscar conjunto..."></div><button class="btn tbl-clear" data-clear="A">Remover filtros</button></div>
           <div class="tbl-wrap tbl-normal"><table class="dt" id="tAdset"></table></div>
-          <div class="pair-chart"><div class="pc-title">CAC por conjunto, por dia</div><canvas id="chAdset"></canvas></div>
+          <div class="pair-chart"><div class="pc-head"><div class="pc-title" data-title="conjunto">CAC por conjunto, por dia</div><div class="pc-tabs" data-chart="chAdset"><button data-m="cac" class="active">CAC</button><button data-m="roas">ROAS</button><button data-m="tm">TM</button></div></div><canvas id="chAdset"></canvas></div>
         </div>
         <div class="table-chart-pair">
-          <div class="thead-title">Anúncios<button class="btn tbl-clear" data-clear="D">Remover filtros</button></div>
+          <div class="thead-title"><div class="tbl-title">Anúncios<input class="tbl-search" data-q="D" type="search" placeholder="Buscar anúncio..."></div><button class="btn tbl-clear" data-clear="D">Remover filtros</button></div>
           <div class="tbl-wrap tbl-double"><table class="dt" id="tAd"></table></div>
-          <div class="pair-chart"><div class="pc-title">CAC por anúncio, por dia</div><canvas id="chAd"></canvas></div>
+          <div class="pair-chart"><div class="pc-head"><div class="pc-title" data-title="anúncio">CAC por anúncio, por dia</div><div class="pc-tabs" data-chart="chAd"><button data-m="cac" class="active">CAC</button><button data-m="roas">ROAS</button><button data-m="tm">TM</button></div></div><canvas id="chAd"></canvas></div>
         </div>
 
         <h2 class="sec-title">Compradores <span class="pill q" id="qCount"></span></h2>
@@ -392,6 +401,7 @@ const STATE = {
   page:'geral', from:`${TODAY_Y}-${TODAY_M}-01`, to:TODAY, preset:'mes', tax:false,
   selDays:new Set(),
   mSelC:new Set(), mSelA:new Set(), mSelAd:new Set(),
+  q:{C:'',A:'',D:''}, chM:{chCamp:'cac',chAdset:'cac',chAd:'cac'},
   sort:{}, colw: JSON.parse(localStorage.getItem('dm_colw')||'{}'),
   iaWin: localStorage.getItem('ia_win') || '14d',
 };
@@ -511,8 +521,8 @@ function renderTable(cfg){
     });
   }
 }
-/* apenas Gasto (vermelho), Faturamento (verde) e ROAS (âmbar) recebem heatmap — cor fixa por coluna, intensidade por valor */
-const HEAT_HUES={gasto:[227,73,72], fat:[27,175,122], roas:[232,164,0]};
+/* Gasto (vermelho), Vendas (azul), Faturamento (verde) e ROAS (âmbar) recebem heatmap — cor fixa por coluna, intensidade por valor */
+const HEAT_HUES={gasto:[227,73,72], vendas:[91,91,214], fat:[27,175,122], roas:[232,164,0]};
 function heat(v,lo,hi,rgb){
   if(v==null||!isFinite(v)||hi===lo) return 'transparent';
   const t=(v-lo)/(hi-lo);
@@ -582,25 +592,32 @@ function hbar(id, items, valFn, color, top, fmtFn){
       scales:{x:{beginAtZero:true,ticks:{color:mut,font:{size:9}},grid:{color:cgrid()}},
               y:{ticks:{color:mut,font:{size:9}},grid:{display:false}}}}});
 }
-/* CAC por dia — uma linha por item da dimensão da tabela (camp/adset/ad); escopo já reflete os filtros ativos */
-function dimCacChart(id, dim, fM, fS){
+/* CAC / ROAS / TM por dia — uma linha por item da dimensão da tabela (camp/adset/ad); escopo já reflete os filtros ativos */
+function dimCacChart(id, dim, fM, fS, q){
   destroy(id); const el=document.getElementById(id); if(!el) return;
-  const spendTot={}; fM.forEach(r=>spendTot[r[dim]]=(spendTot[r[dim]]||0)+r.sp);
+  const mode=STATE.chM[id]||'cac', qn=norm(q||'');
+  const spendTot={}; fM.forEach(r=>{ if(!qn||norm(r[dim]).includes(qn)) spendTot[r[dim]]=(spendTot[r[dim]]||0)+r.sp; });
   const keys=Object.keys(spendTot).sort((a,b)=>spendTot[b]-spendTot[a]).slice(0,6);
   const dset=new Set(); fM.forEach(r=>r.d&&dset.add(r.d)); fS.forEach(r=>r.d&&dset.add(r.d));
   const days=[...dset].sort();
-  const K=(c,dd)=>c+''+dd, sp={}, vd={};
+  const K=(c,dd)=>c+''+dd, sp={}, vd={}, fv={};
   fM.forEach(r=>{if(!r.d)return; sp[K(r[dim],r.d)]=(sp[K(r[dim],r.d)]||0)+r.sp;});
-  fS.forEach(r=>{if(!r.d)return; vd[K(r[dim],r.d)]=(vd[K(r[dim],r.d)]||0)+r.main;});
+  fS.forEach(r=>{if(!r.d)return; vd[K(r[dim],r.d)]=(vd[K(r[dim],r.d)]||0)+r.main; fv[K(r[dim],r.d)]=(fv[K(r[dim],r.d)]||0)+r.val;});
+  const val=(c,dd)=>{ const s=(sp[K(c,dd)]||0)*taxf(), v=vd[K(c,dd)]||0, f=fv[K(c,dd)]||0;
+    if(mode==='cac') return v?+(s/v).toFixed(2):null;
+    if(mode==='roas') return s?+(f/s).toFixed(2):null;
+    return v?+(f/v).toFixed(2):null; };
+  const fmt=mode==='roas'?roasf:brl;
   const ds=keys.map((c,i)=>({label:c.length>22?c.slice(0,22)+'…':c,
-    data:days.map(dd=>{const s=(sp[K(c,dd)]||0)*taxf(), v=vd[K(c,dd)]||0; return v?+(s/v).toFixed(2):null;}),
+    data:days.map(dd=>val(c,dd)),
     borderColor:PALETTE[i%PALETTE.length],backgroundColor:PALETTE[i%PALETTE.length],borderWidth:2,pointRadius:1.5,spanGaps:true,tension:.25}));
   const mut=cmuted();
   charts[id]=new Chart(el,{type:'line',data:{labels:days.map(x=>x.slice(5)),datasets:ds},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{labels:{color:cink(),boxWidth:8,font:{size:9}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},
-      scales:{x:{ticks:{color:mut,font:{size:9}},grid:{display:false}},y:{ticks:{color:mut,font:{size:9},callback:v=>brl(v)},grid:{color:cgrid()},beginAtZero:true}}}});
+      plugins:{legend:{labels:{color:cink(),boxWidth:8,font:{size:9}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+fmt(c.raw)}}},
+      scales:{x:{ticks:{color:mut,font:{size:9}},grid:{display:false}},y:{ticks:{color:mut,font:{size:9},callback:v=>fmt(v)},grid:{color:cgrid()},beginAtZero:true}}}});
 }
+const CH_NAMES={cac:'CAC',roas:'ROAS',tm:'Ticket médio'};
 
 /* ---------------- KPI cards ---------------- */
 function kpiCard(k){ return `<div class="kpi ${k.hero?'hero':''}"><div class="kl"><span>${k.label}</span>${k.pill?`<span class="pill q">${k.pill}</span>`:''}</div><div class="kv">${k.val}</div><div class="ka">${k.aux||''}</div></div>`; }
@@ -620,7 +637,7 @@ const METRIC_COLS=[
   {key:'roas',label:'ROAS',type:'roas',heat:'roas'},
 ];
 const DAILY_COLS=[{key:'date',label:'Data',type:'date'},{key:'wd',label:'Dia',type:'dim',w:64}].concat(METRIC_COLS);
-const HCOLS=[{key:'dim',label:'',type:'dim',big:true}].concat(METRIC_COLS.map(c=>{const o={...c}; delete o.heat; return o;}));
+const HCOLS=[{key:'dim',label:'',type:'dim',big:true}].concat(METRIC_COLS.map(c=>c.key==='vendas'?{...c,heat:'vendas'}:c));
 function metricCells(x,d){
   return {gasto:d.gasto, cpm:d.cpm, ctr:d.ctr, cr:d.cr, vischk:d.vischk, convchk:d.convchk,
     vendas:x.vendas, cac:d.cac, fat:x.fat, ticket:d.ticket, roas:d.roas};
@@ -725,18 +742,21 @@ function renderMeta(){
     onSelect:(k,e)=>{ toggleSet(STATE.selDays,k,e&&(e.ctrlKey||e.metaKey)); renderAll(); },
   });
 
-  function hierRows(map){ return Object.entries(map).map(([k,a])=>{const dv=derive(a);
+  function hierRows(map,q){ const qn=norm(q||''); return Object.entries(map).filter(([k])=>!qn||norm(k).includes(qn)).map(([k,a])=>{const dv=derive(a);
     return {k, cells:Object.assign({dim:k}, metricCells(a,dv))};}); }
   function totRowOf(tt){const dv=derive(tt);return Object.assign({dim:null}, metricCells(tt,dv));}
   const Sc=metaScope('C'), Sa=metaScope('A'), Sd=metaScope('D');
-  renderTable({id:'tCamp', cols:HCOLS.map((c,i)=>i===0?{...c,label:'Campanha'}:c), rows:hierRows(buildAgg(Sc.fS,Sc.fM,'camp')), total:totRowOf(totals(Sc.fS,Sc.fM)),
+  renderTable({id:'tCamp', cols:HCOLS.map((c,i)=>i===0?{...c,label:'Campanha'}:c), rows:hierRows(buildAgg(Sc.fS,Sc.fM,'camp'),STATE.q.C), total:totRowOf(totals(Sc.fS,Sc.fM)),
     selectable:true, selSet:STATE.mSelC, onSelect:(k,e)=>selDim('C',k,e&&(e.ctrlKey||e.metaKey))});
-  renderTable({id:'tAdset', cols:HCOLS.map((c,i)=>i===0?{...c,label:'Conjunto',big:true}:c), rows:hierRows(buildAgg(Sa.fS,Sa.fM,'adset')), total:totRowOf(totals(Sa.fS,Sa.fM)),
+  renderTable({id:'tAdset', cols:HCOLS.map((c,i)=>i===0?{...c,label:'Conjunto',big:true}:c), rows:hierRows(buildAgg(Sa.fS,Sa.fM,'adset'),STATE.q.A), total:totRowOf(totals(Sa.fS,Sa.fM)),
     selectable:true, selSet:STATE.mSelA, onSelect:(k,e)=>selDim('A',k,e&&(e.ctrlKey||e.metaKey))});
-  renderTable({id:'tAd', cols:HCOLS.map((c,i)=>i===0?{...c,label:'Anúncio'}:c), rows:hierRows(buildAgg(Sd.fS,Sd.fM,'ad')), total:totRowOf(totals(Sd.fS,Sd.fM)),
+  renderTable({id:'tAd', cols:HCOLS.map((c,i)=>i===0?{...c,label:'Anúncio'}:c), rows:hierRows(buildAgg(Sd.fS,Sd.fM,'ad'),STATE.q.D), total:totRowOf(totals(Sd.fS,Sd.fM)),
     selectable:true, selSet:STATE.mSelAd, onSelect:(k,e)=>selDim('D',k,e&&(e.ctrlKey||e.metaKey))});
 
-  dimCacChart('chCamp', 'camp', fM, fS); dimCacChart('chAdset', 'adset', fM, fS); dimCacChart('chAd', 'ad', fM, fS);
+  dimCacChart('chCamp', 'camp', fM, fS, STATE.q.C); dimCacChart('chAdset', 'adset', fM, fS, STATE.q.A); dimCacChart('chAd', 'ad', fM, fS, STATE.q.D);
+  document.querySelectorAll('.pc-tabs').forEach(t=>{ const m=STATE.chM[t.dataset.chart];
+    t.querySelectorAll('button').forEach(b=>b.classList.toggle('active',b.dataset.m===m));
+    const ti=t.parentElement.querySelector('.pc-title'); ti.textContent=CH_NAMES[m]+' por '+ti.dataset.title+', por dia'; });
 
   const vendas=fS.reduce((s,r)=>s+r.main,0);
   document.getElementById('qCount').textContent=vendas+' vendas · '+fS.length+' linhas';
@@ -1002,6 +1022,8 @@ document.querySelectorAll('.tbl-clear').forEach(btn=>btn.addEventListener('click
   DIM_ORDER.slice(DIM_ORDER.indexOf(dim)).forEach(k=>sets[k].clear());
   renderMeta();
 }));
+document.querySelectorAll('.tbl-search').forEach(inp=>inp.addEventListener('input',()=>{ STATE.q[inp.dataset.q]=inp.value; renderMeta(); }));
+document.querySelectorAll('.pc-tabs button').forEach(b=>b.addEventListener('click',()=>{ STATE.chM[b.parentElement.dataset.chart]=b.dataset.m; renderMeta(); }));
 document.getElementById('refreshBtn').addEventListener('click',function(){ this.classList.add('loading'); location.href=location.pathname+'?t='+Date.now()+location.hash; });
 
 document.getElementById('dateBtn').addEventListener('click',e=>{ e.stopPropagation();
